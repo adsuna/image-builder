@@ -2636,6 +2636,13 @@ image_types:
         qcow2_compat: "0.10"
     image_config:
       <<: *qcow2_image_config
+      kernel_options:
+        - "console=tty0"
+        - "console=ttyS0,115200n8"
+        - "net.ifnames=0"
+        - "crashkernel=auto"
+        - "netroot=iscsi"
+        - "rd.iscsi.firmware=1"
       time_synchronization:
         servers:
           - hostname: "169.254.169.254"
@@ -2654,14 +2661,47 @@ image_types:
           config:
             datasource_list:
               - "Oracle"
+      dracut_conf:
+        - filename: "oci.conf"
+          config:
+            add_drivers:
+              - "mlx5_core"
       conditions:
         <<: *qcow2_image_config_conditions
+        "rhel-8.10+ gets OCI iSCSI dracut configuration":
+          when:
+            distro_name: "rhel"
+            version_greater_or_equal: "8.10"
+          shallow_merge:
+            # iSCSI in initramfs so OCI BM can attach the boot LUN.
+            dracut_conf:
+              - filename: "oci.conf"
+                config:
+                  add_drivers:
+                    - "mlx5_core"
+                    - "iscsi_ibft"
+                  add_dracutmodules:
+                    - "iscsi"
+                  install:
+                    - "/usr/sbin/iscsiadm"
         "rhel needs the rhel release rpm gpg key":
           when:
             distro_name: "rhel"
           shallow_merge:
             gpgkey_files:
               - "/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release"
+    package_sets:
+      os:
+        - *qcow2_common_pkgset
+        - conditions:
+            "rhel-8.10+ gets OCI iSCSI tools":
+              when:
+                distro_name: "rhel"
+                version_greater_or_equal: "8.10"
+              append:
+                include:
+                  # Required so dracut iscsi module check passes during kernel-core %posttrans.
+                  - "iscsi-initiator-utils"
     partition_table:
       x86_64:
         type: "gpt"
