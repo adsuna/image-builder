@@ -1213,6 +1213,12 @@ image_types:
           config:
             datasource_list:
               - "Oracle"
+      files:
+        - path: "/etc/cloud/cloud.cfg.d/99-oracle-imds-wait.cfg"
+          data: |
+            datasource:
+              Oracle:
+                max_wait: 60
       dracut_conf:
         - filename: "oci.conf"
           config:
